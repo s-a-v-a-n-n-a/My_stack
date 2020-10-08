@@ -5,11 +5,11 @@
     There is also defend from wrong using of it.
 
     Thank you for using this program!
-    \warning Please, make your own type of stack by undefing stack_elem and elem\n
-             Please, include math.h, stdlib.h and stdio.h to your file
+    \warning Please, include math.h, stdlib.h and stdio.h to your file\n
+             This stack works only with doubles
     \authors Anna Savchuk
     \todo    Print out canaries and addresses
-    \date    Last update was 08.10.20 at 17:48
+    \date    Last update was 09.10.20 at 1:59
 */
 
 typedef enum stack_code_errors { STACK_OK,
@@ -21,7 +21,9 @@ typedef enum stack_code_errors { STACK_OK,
                                  STACK_NO_MEMORY,
                                  STACK_TOO_BIG,
                                  STACK_DEAD_CANARY,
-                                 STACK_INVADERS    } stack_code;
+                                 STACK_INVADERS,
+                                 STACK_TRANSACTION_ERROR,
+                                 STACK_TRANSACTION_OK    } stack_code;
 
 
 const char *STACK_CONSTRUCT     = "CONSTRUCTOR";
@@ -115,8 +117,17 @@ Checks if the stack was spoiled and returns it to last saved correct version if 
 Returns  STACK_CHANGED      If the stack was spoiled
          STACK_OK           If everything is ok
 */
-static stack_code reserve_copy        (Stack *that_stack, Stack *copy_stack);
+stack_code        reserve_copy        (Stack **that_stack, Stack **copy_stack);
 
+/*!
+Frees the spoiled stack and creates new due to the copy
+@param[in]  **stack_1       The pointer on pointer on the shell of the spoiled stack
+@param[in]  *stack_2        The pointer on the shell of the copy of stack
+
+Returns  STACK_CHANGED      If the stack was spoiled
+         STACK_OK           If everything is ok
+*/
+stack_code        transaction         (Stack **stack_1, Stack *stack_2);
 
 /*!
 Checks all of the states of the stack
@@ -125,7 +136,7 @@ Checks all of the states of the stack
 Returns  STACK_CHANGED      If the stack was spoiled !!!!!!!!!!!!!!!!!!!!!!!!!!!!
          STACK_OK           If everything is ok
 */
-stack_code        stack_verifier      (Stack *that_stack);
+stack_code        stack_verifier      (Stack **that_stack);
 
 /*!
 Creates new stack
@@ -145,38 +156,38 @@ stack_code        stack_construct     (Stack **that_stack, size_t stack_size);
 
 /*!
 Destructs the stack
-@param[in]  *that_stack     The pointer on the shell of the stack
+@param[in]  **that_stack    The pointer on pointer on the shell of the stack
 
 Returns  STACK_OK           If everything is ok
 */
-stack_code        stack_destruct      (Stack *that_stack);
+stack_code        stack_destruct      (Stack **that_stack);
 
 /*!
 Changes the capacity of the stack
-@param[in]  *that_stack     The pointer on the shell of the stack
+@param[in]  **that_stack    The pointer on pointer on the shell of the stack
 
 Returns  STACK_OK           If everything is ok
 */
-stack_code        stack_resize        (Stack *that_stack, const double amount);
+stack_code        stack_resize        (Stack **that_stack, const double amount);
 
 /*!
 Adds value to the end of the stack
-@param[in]  *that_stack     The pointer on the shell of the stack
+@param[in]  **that_stack    The pointer on pointer on the shell of the stack
 @param[in]  value           The value wanted to be pushed
 
 Returns  STACK_OK           If everything is ok
 */
-stack_code        stack_push          (Stack *that_stack, stack_elem value);
+stack_code        stack_push          (Stack **that_stack, stack_elem value);
 
 
 /*!
 Delets value from the end of the stack
-@param[in]  *that_stack     The pointer on the shell of the stack
+@param[in]  **that_stack    The pointer on pointer on the shell of the stack
 @param[in]  *value          The pointer on the value wanted to be pushed
 
 Returns  STACK_OK           If everything is ok
 */
-stack_code        stack_pop           (Stack *that_stack, stack_elem *value);
+stack_code        stack_pop           (Stack **that_stack, stack_elem *value);
 
 void assertion (stack_code code)
 {
@@ -209,6 +220,12 @@ void assertion (stack_code code)
         case STACK_INVADERS:
             printf("Error: OUTSIDE INVASION INSIDE OF STACK\n");
             break;
+        case STACK_TRANSACTION_ERROR:
+            printf("Error: ERROR OF MAKING A TRANSACTION\n");
+            break;
+        case STACK_TRANSACTION_OK:
+            printf("A TRANSACTION WAS MADE\n");
+            break;
         default:
             break;
     }
@@ -218,7 +235,7 @@ void print_state_stack(FILE *log, Stack *that_stack)
 {
     fprintf(log, "Current capacity: %u\n", that_stack->stack->capacity);
     fprintf(log, "Current size: %u\n", that_stack->stack->length);
-    for (size_t i = 0; i < that_stack->stack->length; i++)
+    for (size_t i = 0; i <= that_stack->stack->length; i++)
     {
         fprintf(log, "[%4u] : " elem "\n", i, that_stack->stack->buffer[i]);
     }
@@ -263,6 +280,8 @@ void stack_dump (Stack *that_stack, stack_code code, const char *who)
         case STACK_DELETED:
 
             fprintf(log, "DEALING WITH NON-EXISTENT UNIT OR THE UNIT WAS DAMAGED\n");
+            fprintf(log, "FIRST CANARY : %0xd\n", that_stack->canary_first);
+            fprintf(log, "LAST  CANARY : %0xd\n", that_stack->canary_last);
             break;
 
         case STACK_NO_CONSTRUCT:
@@ -291,12 +310,29 @@ void stack_dump (Stack *that_stack, stack_code code, const char *who)
         case STACK_DEAD_CANARY:
 
             fprintf(log, "THE UNIT WAS DAMAGED\n");
+            fprintf(log, "FIRST CANARY : %0xd\n", that_stack->canary_first);
+            fprintf(log, "LAST  CANARY : %0xd\n", that_stack->canary_last);
             print_state_stack(log, that_stack);
             break;
 
         case STACK_INVADERS:
 
             fprintf(log, "THE INVASION WAS DETECTED\n");
+            fprintf(log, "FIRST CANARY : %0xd\n", that_stack->canary_first);
+            fprintf(log, "LAST  CANARY : %0xd\n", that_stack->canary_last);
+            print_state_stack(log, that_stack);
+            break;
+
+        case STACK_TRANSACTION_ERROR:
+
+            fprintf(log, "ERROR OF MAKING A TRANSACTION\n");
+            break;
+
+        case STACK_TRANSACTION_OK:
+
+            fprintf(log, "THE TRANSACTION WAS MADE\n");
+            fprintf(log, "FIRST CANARY : %0xd\n", that_stack->canary_first);
+            fprintf(log, "LAST  CANARY : %0xd\n", that_stack->canary_last);
             print_state_stack(log, that_stack);
             break;
 
@@ -352,42 +388,62 @@ long int hashing_stack (Stack *that_stack)
     long int hash_tmp             = that_stack->stack->hash_stack;
     that_stack->stack->hash_stack = 0;
 
-    long int hash_sum = 0;
+    long int sum         = 0;
+    long int coefficient = 1;
 
-    long int sum        = 1;
-    long int prefix_sum = 0;
-
-    for (char* i = (char*)(that_stack->stack); i < (char*)(that_stack->stack) + sizeof((that_stack->stack)); i++)
+    for (char* i = (char*)&(that_stack->stack->canary_before); i < (char*)&(that_stack->stack->hash_stack); i++)
     {
-        sum = (sum + *i) % 65521;
-        prefix_sum = (prefix_sum + sum) % 65521;
+        sum = (sum + *i * coefficient) % 65521;
+        coefficient++;
     }
-
-    hash_sum = (prefix_sum << 16) + sum;
 
     that_stack->stack->hash_stack = hash_tmp;
-    return hash_sum;
+    return sum;
 }
 
-static stack_code reserve_copy (Stack *that_stack, Stack *copy_stack)
+stack_code reserve_copy (Stack **that_stack, Stack **copy_stack)
 {
-    that_stack->stack->hash_stack  = copy_stack->stack->hash_stack;
-    that_stack->stack->hash_buffer = copy_stack->stack->hash_buffer;
-    that_stack->stack->length      = copy_stack->stack->length;
-    that_stack->stack->capacity    = copy_stack->stack->capacity;
+    (*that_stack)->stack->hash_stack  = (*copy_stack)->stack->hash_stack;
+    (*that_stack)->stack->hash_buffer = (*copy_stack)->stack->hash_buffer;
+    (*that_stack)->stack->length      = (*copy_stack)->stack->length;
+    (*that_stack)->stack->capacity    = (*copy_stack)->stack->capacity;
 
-    for (size_t i = 0; i < copy_stack->stack->length; i++)
+    for (size_t i = 0; i < (*copy_stack)->stack->length; i++)
     {
-        that_stack->stack->buffer[i] = copy_stack->stack->buffer[i];
+        (*that_stack)->stack->buffer[i] = (*copy_stack)->stack->buffer[i];
     }
-    that_stack->stack->buffer[that_stack->stack->length + 1] = NAN;
+    (*that_stack)->stack->buffer[(*that_stack)->stack->length] = NAN;
 
     return STACK_OK;
 }
 
-stack_code stack_verifier (Stack *that_stack)
+stack_code transaction(Stack **stack_1, Stack *stack_2)
 {
-    stack_code indicator = is_pointer_valid(that_stack);
+    free((*stack_1)->stack->buffer);
+    free((*stack_1)->stack);
+
+    (*stack_1)                = (Stack*) calloc(1, sizeof(Stack));
+    (*stack_1)->canary_first  = 0x5E7CA6E;
+    (*stack_1)->stack         = (Structure*) calloc(1, sizeof(Structure));
+    (*stack_1)->canary_last   = 0x0FFCA6E;
+
+    (*stack_1)->stack->canary_before = 0xDEADB14D;
+    (*stack_1)->stack->capacity      = stack_2->stack->capacity;
+    (*stack_1)->stack->buffer        = (stack_elem*) calloc((*stack_1)->stack->capacity, sizeof(stack_elem));
+    if (!(*stack_1)->stack->buffer)
+    {
+        ASSERTION(STACK_TRANSACTION_ERROR);
+        stack_dump((*stack_1), STACK_TRANSACTION_ERROR, STACK_CONSTRUCT);
+        return STACK_TRANSACTION_ERROR;
+    }
+
+    reserve_copy(stack_1, &cage_copy);
+    return STACK_TRANSACTION_OK;
+}
+
+stack_code stack_verifier (Stack **that_stack)
+{
+    stack_code indicator = is_pointer_valid(*that_stack);
     if (indicator != STACK_OK)
     {
         return indicator;
@@ -398,20 +454,37 @@ stack_code stack_verifier (Stack *that_stack)
         return indicator;
     }
 
-    long int hash_tmp_stack     = hashing_stack(that_stack);
-    long int hash_tmp_stack_buf = hashing_buffer(that_stack);
+    long int flag_eq            = ((*that_stack)->stack->buffer[(*that_stack)->stack->length] ==
+                                   cage_copy ->stack->buffer[cage_copy ->stack->length]);
+
+    long int hash_tmp_stack     = hashing_stack(*that_stack);
+    long int hash_tmp_stack_buf = hashing_buffer(*that_stack);
 
     long int hash_tmp_copy      = hashing_stack(cage_copy);
     long int hash_tmp_copy_buf  = hashing_buffer(cage_copy);
 
-    long int flag_hash_stack      = (hash_tmp_stack == that_stack->stack->hash_stack);
+    long int flag_hash_stack      = (hash_tmp_stack == (*that_stack)->stack->hash_stack);
     long int flag_hash_copy       = (hash_tmp_copy  == cage_copy->stack->hash_stack);
-    long int flag_hash_stack_buf  = (hash_tmp_stack_buf == that_stack->stack->hash_buffer);
+    long int flag_hash_stack_buf  = (hash_tmp_stack_buf == (*that_stack)->stack->hash_buffer);
     long int flag_hash_copy_buf   = (hash_tmp_copy_buf  == cage_copy->stack->hash_buffer);
 
-    if (that_stack->canary_first == 0x5E7CA6E && that_stack->canary_last == 0x0FFCA6E)
+    if ((*that_stack)->canary_first == 0x5E7CA6E && (*that_stack)->canary_last == 0x0FFCA6E)
     {
-        if (!flag_hash_stack && !flag_hash_copy && !flag_hash_stack_buf && !flag_hash_copy_buf)
+        if (flag_eq && (!isnan((*that_stack)->stack->buffer[(*that_stack)->stack->length]) || !isnan((cage_copy)->stack->buffer[cage_copy->stack->length])))
+        {
+            return STACK_DELETED;
+        }
+        else if (!flag_eq && !isnan((*that_stack)->stack->buffer[(*that_stack)->stack->length]))
+        {
+            stack_code code = transaction(that_stack, cage_copy);
+            return code;
+        }
+        else if (!flag_eq && !isnan((cage_copy)->stack->buffer[cage_copy->stack->length]))
+        {
+            stack_code code = transaction(&cage_copy, *that_stack);
+            return code;
+        }
+        else if (!flag_hash_stack && !flag_hash_copy && !flag_hash_stack_buf && !flag_hash_copy_buf)
         {
             return STACK_INVADERS;
         }
@@ -430,29 +503,39 @@ stack_code stack_verifier (Stack *that_stack)
             cage_copy->stack->capacity   = new_len + 1;
             cage_copy->stack->hash_stack = hash_tmp_copy;
 
-            reserve_copy(that_stack, cage_copy);
+            reserve_copy(that_stack, &cage_copy);
 
-            return STACK_OK;
+            return STACK_TRANSACTION_OK;
         }
         else if (!flag_hash_stack && !flag_hash_copy && flag_hash_stack_buf && !flag_hash_copy_buf)
         {
             long int i       = 1;
             long int new_len = 0;
 
-            while(!isnan(that_stack->stack->buffer[i]))
+            while(!isnan((*that_stack)->stack->buffer[i]))
             {
                 new_len++;
                 i++;
             }
 
-            that_stack->stack->length     = new_len;
-            that_stack->stack->capacity   = new_len + 1;
-            that_stack->stack->hash_stack = hash_tmp_stack;
+            (*that_stack)->stack->length     = new_len;
+            (*that_stack)->stack->capacity   = new_len + 1;
+            (*that_stack)->stack->hash_stack = hash_tmp_stack;
 
-            reserve_copy(cage_copy, that_stack);
+            reserve_copy(&cage_copy, that_stack);
+            return STACK_TRANSACTION_OK;
         }
-        else if ((!flag_hash_stack && flag_hash_copy && !flag_hash_stack_buf && !flag_hash_copy_buf) ||
-                (flag_hash_stack && !flag_hash_copy && !flag_hash_stack_buf && !flag_hash_copy_buf))
+        else if (!flag_hash_stack && flag_hash_copy && !flag_hash_stack_buf && flag_hash_copy_buf)
+        {
+            stack_code code = transaction(that_stack, cage_copy);
+            return code;
+        }
+        else if(flag_hash_stack && !flag_hash_copy && flag_hash_stack_buf && !flag_hash_copy_buf)
+        {
+            stack_code code = transaction(&cage_copy, *that_stack);
+            return code;
+        }
+        else if (!(flag_hash_stack && flag_hash_copy && flag_hash_stack_buf && flag_hash_copy_buf))
         {
             return STACK_INVADERS;
         }
@@ -461,7 +544,6 @@ stack_code stack_verifier (Stack *that_stack)
     {
         return STACK_DEAD_CANARY;
     }
-
     return STACK_OK;
 }
 
@@ -471,7 +553,7 @@ Stack *stack_new(size_t size)
 
     if (stack_construct(&cage, size) == STACK_NO_CONSTRUCT)
     {
-        stack_destruct(cage);
+        stack_destruct(&cage);
     }
 
     return cage;
@@ -494,7 +576,8 @@ stack_code stack_construct(Stack **that_stack, size_t stack_size)
         return STACK_NO_CONSTRUCT;
 
     }
-    (*that_stack)->stack->buffer[0]     = NAN;
+    (*that_stack)->stack->buffer[0]    = NAN;
+    (*that_stack)->stack->buffer[1]    = NAN;
     (*that_stack)->stack->length       = 1;
     (*that_stack)->stack->hash_buffer  = hashing_buffer(*that_stack);
     (*that_stack)->stack->hash_stack   = hashing_stack (*that_stack);
@@ -513,7 +596,8 @@ stack_code stack_construct(Stack **that_stack, size_t stack_size)
         stack_dump(*that_stack, STACK_NO_MEMORY, STACK_CONSTRUCT);
         return STACK_NO_CONSTRUCT;
     }
-    cage_copy->stack->buffer[0]     = NAN;
+    cage_copy->stack->buffer[0]    = NAN;
+    cage_copy->stack->buffer[1]    = NAN;
     cage_copy->stack->length       = 1;
     cage_copy->stack->hash_buffer  = hashing_buffer(cage_copy);
     cage_copy->stack->hash_stack   = hashing_stack (cage_copy);
@@ -521,27 +605,32 @@ stack_code stack_construct(Stack **that_stack, size_t stack_size)
     return STACK_OK;
 }
 
-stack_code stack_destruct(Stack *that_stack)
+stack_code stack_destruct(Stack **that_stack)
 {
     stack_code check = stack_verifier(that_stack);
-    if (check != STACK_OK)
+    if (check == STACK_TRANSACTION_OK)
     {
         ASSERTION(check);
-        stack_dump(that_stack, check, STACK_DESTRUCT);
+        stack_dump(*that_stack, check, STACK_DESTRUCT);
+    }
+    else if (check != STACK_OK)
+    {
+        ASSERTION(check);
+        stack_dump(*that_stack, check, STACK_DESTRUCT);
         return check;
     }
     else
-        stack_dump(that_stack, STACK_OK, STACK_DESTRUCT);
+        stack_dump(*that_stack, STACK_OK, STACK_DESTRUCT);
 
-    if (that_stack)
+    if (*that_stack)
     {
-        if (that_stack->stack)
+        if ((*that_stack)->stack)
         {
-            if (that_stack->stack->buffer)
-                free(that_stack->stack->buffer);
-            free(that_stack->stack);
+            if ((*that_stack)->stack->buffer)
+                free((*that_stack)->stack->buffer);
+            free((*that_stack)->stack);
         }
-        free(that_stack);
+        free(*that_stack);
     }
 
     if (cage_copy)
@@ -560,8 +649,13 @@ stack_code stack_destruct(Stack *that_stack)
 
 stack_code stack_resize(Stack *that_stack, const double amount)
 {
-    stack_code check = stack_verifier(that_stack);
-    if (check != STACK_OK)
+    stack_code check = stack_verifier(&that_stack);
+    if (check == STACK_TRANSACTION_OK)
+    {
+        ASSERTION(check);
+        stack_dump(that_stack, check, STACK_RESIZE);
+    }
+    else if (check != STACK_OK)
     {
         ASSERTION(check);
         stack_dump(that_stack, check, STACK_RESIZE);
@@ -589,27 +683,32 @@ stack_code stack_resize(Stack *that_stack, const double amount)
     return STACK_OK;
 }
 
-stack_code stack_push(Stack *that_stack, const stack_elem value)
+stack_code stack_push(Stack **that_stack, const stack_elem value)
 {
     stack_code check = stack_verifier(that_stack);
-    if (check != STACK_OK)
+    if (check == STACK_TRANSACTION_OK)
     {
         ASSERTION(check);
-        stack_dump(that_stack, check, STACK_PUSH);
+        stack_dump((*that_stack), check, STACK_PUSH);
+    }
+    else if (check != STACK_OK)
+    {
+        ASSERTION(check);
+        stack_dump((*that_stack), check, STACK_PUSH);
         return check;
     }
 
-    if (that_stack->stack->length + 1 >= that_stack->stack->capacity)
+    if ((*that_stack)->stack->length + 1 >= (*that_stack)->stack->capacity)
     {
-        stack_resize(that_stack, 2);
+        stack_resize((*that_stack), 2);
         stack_resize(cage_copy,  2);
     }
 
-    that_stack->stack->buffer[that_stack->stack->length++] = value;
-    that_stack->stack->buffer[that_stack->stack->length]   = NAN;
+    (*that_stack)->stack->buffer[(*that_stack)->stack->length++] = value;
+    (*that_stack)->stack->buffer[(*that_stack)->stack->length]   = NAN;
 
-    that_stack->stack->hash_buffer = hashing_buffer(that_stack);
-    that_stack->stack->hash_stack  = hashing_stack (that_stack);
+    (*that_stack)->stack->hash_buffer = hashing_buffer((*that_stack));
+    (*that_stack)->stack->hash_stack  = hashing_stack ((*that_stack));
 
     cage_copy->stack->buffer[cage_copy->stack->length++] = value;
     cage_copy->stack->buffer[cage_copy->stack->length]   = NAN;
@@ -620,32 +719,37 @@ stack_code stack_push(Stack *that_stack, const stack_elem value)
     return STACK_OK;
 }
 
-stack_code stack_pop(Stack *that_stack, stack_elem *value)
+stack_code stack_pop(Stack **that_stack, stack_elem *value)
 {
     stack_code check = stack_verifier(that_stack);
-    if (check != STACK_OK)
+    if (check == STACK_TRANSACTION_OK)
     {
         ASSERTION(check);
-        stack_dump(that_stack, check, STACK_POP);
+        stack_dump((*that_stack), check, STACK_POP);
     }
-    if (that_stack->stack->length <= 0)
+    else if (check != STACK_OK)
+    {
+        ASSERTION(check);
+        stack_dump((*that_stack), check, STACK_POP);
+    }
+    if ((*that_stack)->stack->length <= 0)
     {
         ASSERTION(STACK_UNDERFLOW);
-        stack_dump(that_stack, STACK_UNDERFLOW, STACK_POP);
+        stack_dump((*that_stack), STACK_UNDERFLOW, STACK_POP);
         return STACK_UNDERFLOW;
     }
 
-    if (that_stack->stack->length <= that_stack->stack->capacity/2)
+    if ((*that_stack)->stack->length <= (*that_stack)->stack->capacity/2)
     {
-        stack_resize(that_stack, 0.5);
+        stack_resize((*that_stack), 0.5);
         stack_resize(cage_copy,  0.5);
     }
 
-    *value = that_stack->stack->buffer[--that_stack->stack->length];
-    that_stack->stack->buffer[that_stack->stack->length] = NAN;
+    *value = (*that_stack)->stack->buffer[--(*that_stack)->stack->length];
+    (*that_stack)->stack->buffer[(*that_stack)->stack->length] = NAN;
 
-    that_stack->stack->hash_buffer = hashing_buffer(that_stack);
-    that_stack->stack->hash_stack  = hashing_stack(that_stack);
+    (*that_stack)->stack->hash_buffer = hashing_buffer((*that_stack));
+    (*that_stack)->stack->hash_stack  = hashing_stack((*that_stack));
 
     cage_copy->stack->buffer[cage_copy->stack->length--] = NAN;
 
