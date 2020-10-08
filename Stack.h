@@ -9,7 +9,7 @@
              This stack works only with doubles
     \authors Anna Savchuk
     \note    If any function gets errors not like STACK_OK, they send it to stack_dump
-    \date    Last update was 09.10.20 at 2:43
+    \date    Last update was 09.10.20 at 2:45
 */
 
 typedef enum stack_code_errors { STACK_OK,
@@ -65,7 +65,7 @@ static Stack *cage_copy;
 
 /*!
 Prints the errors in the console
-@param[in]  code            The identifier of the error
+@param[in]        code                The identifier of the error
 */
 void              assertion           (stack_code code);
 
