@@ -9,7 +9,7 @@
              Please, include math.h, stdlib.h and stdio.h to your file
     \authors Anna Savchuk
     \todo    Print out canaries and addresses
-    \date    Last update was 08.10.20 at 13:34
+    \date    Last update was 08.10.20 at 17:48
 */
 
 typedef enum stack_code_errors { STACK_OK,
@@ -75,7 +75,7 @@ Outputs the information about the current state of the stack into the file
 void              print_state_stack   (FILE *log, Stack *that_stack);
 
 /*!
-Outputs the information about the current state of the stack into "log.txt"
+Outputs the information about the current state of the stack into "log_file.txt"
 @param[in]  *that_stack     The pointer on the shell of the stack
 @param[in]  code            The code of the mistake
 @param[in]  who             The code o the function requested for dump
@@ -137,11 +137,11 @@ Stack            *stack_new           (size_t size);
 
 /*!
 Constructs the stack
-@param[in]  *that_stack     The pointer on the shell of the future stack
+@param[in]  **that_stack    The pointer on pointer on the shell of the future stack
 
 Returns  STACK_OK           If everything is ok
 */
-stack_code        stack_construct     (Stack *that_stack, size_t stack_size);
+stack_code        stack_construct     (Stack **that_stack, size_t stack_size);
 
 /*!
 Destructs the stack
@@ -237,7 +237,7 @@ void stack_dump (Stack *that_stack, stack_code code, const char *who)
         mode = "wb";
     else
         mode = "ab";
-    FILE *log = fopen("log.txt", mode);
+    FILE *log = fopen("log_file.txt", mode);
 
     fprintf(log, "CURRENT STATE OF STACK\n");
     fprintf(log, "THE NEWS FROM %s\n", who);
@@ -467,12 +467,9 @@ stack_code stack_verifier (Stack *that_stack)
 
 Stack *stack_new(size_t size)
 {
-    Stack *cage         = (Stack*) calloc(1, sizeof(Stack));
-    cage->canary_first  = 0x5E7CA6E;
-    cage->stack         = (Structure*) calloc(1, sizeof(Structure));
-    cage->canary_last   = 0x0FFCA6E;
+    Stack *cage = {};
 
-    if (stack_construct(cage, size) == STACK_NO_CONSTRUCT)
+    if (stack_construct(&cage, size) == STACK_NO_CONSTRUCT)
     {
         stack_destruct(cage);
     }
@@ -480,22 +477,27 @@ Stack *stack_new(size_t size)
     return cage;
 }
 
-stack_code stack_construct(Stack *that_stack, size_t stack_size)
+stack_code stack_construct(Stack **that_stack, size_t stack_size)
 {
-    that_stack->stack->canary_before = 0xDEADB14D;
-    that_stack->stack->capacity      = stack_size + 2;
-    that_stack->stack->buffer        = (stack_elem*) calloc(stack_size + 2, sizeof(stack_elem));
-    if (!that_stack->stack->buffer)
+    (*that_stack)                = (Stack*) calloc(1, sizeof(Stack));
+    (*that_stack)->canary_first  = 0x5E7CA6E;
+    (*that_stack)->stack         = (Structure*) calloc(1, sizeof(Structure));
+    (*that_stack)->canary_last   = 0x0FFCA6E;
+
+    (*that_stack)->stack->canary_before = 0xDEADB14D;
+    (*that_stack)->stack->capacity      = stack_size + 2;
+    (*that_stack)->stack->buffer        = (stack_elem*) calloc(stack_size + 2, sizeof(stack_elem));
+    if (!(*that_stack)->stack->buffer)
     {
         ASSERTION(STACK_NO_CONSTRUCT);
-        stack_dump(that_stack, STACK_NO_MEMORY, STACK_CONSTRUCT);
+        stack_dump((*that_stack), STACK_NO_MEMORY, STACK_CONSTRUCT);
         return STACK_NO_CONSTRUCT;
 
     }
-    that_stack->stack->buffer[0]     = NAN;
-    that_stack->stack->length       = 1;
-    that_stack->stack->hash_buffer  = hashing_buffer(that_stack);
-    that_stack->stack->hash_stack   = hashing_stack (that_stack);
+    (*that_stack)->stack->buffer[0]     = NAN;
+    (*that_stack)->stack->length       = 1;
+    (*that_stack)->stack->hash_buffer  = hashing_buffer(*that_stack);
+    (*that_stack)->stack->hash_stack   = hashing_stack (*that_stack);
 
     cage_copy               = (Stack*) calloc(1, sizeof(Stack));
     cage_copy->canary_first = 0x5E7CA6E;
@@ -504,11 +506,11 @@ stack_code stack_construct(Stack *that_stack, size_t stack_size)
 
     cage_copy->stack->canary_before = 0xDEADB14D;
     cage_copy->stack->capacity      = stack_size + 2;
-    cage_copy->stack->buffer        = (stack_elem*) calloc(stack_size + 2, sizeof(stack_elem)); //!!!!!!!!!!
+    cage_copy->stack->buffer        = (stack_elem*) calloc(stack_size + 2, sizeof(stack_elem));
     if (!cage_copy->stack->buffer)
     {
         ASSERTION(STACK_NO_CONSTRUCT);
-        stack_dump(that_stack, STACK_NO_MEMORY, STACK_CONSTRUCT);
+        stack_dump(*that_stack, STACK_NO_MEMORY, STACK_CONSTRUCT);
         return STACK_NO_CONSTRUCT;
     }
     cage_copy->stack->buffer[0]     = NAN;
