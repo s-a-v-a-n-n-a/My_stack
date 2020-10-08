@@ -9,7 +9,7 @@
              This stack works only with doubles
     \authors Anna Savchuk
     \note    If any function gets errors not like STACK_OK, they send it to stack_dump
-    \date    Last update was 09.10.20 at 2:37
+    \date    Last update was 09.10.20 at 2:43
 */
 
 typedef enum stack_code_errors { STACK_OK,
@@ -123,8 +123,8 @@ Frees the spoiled stack and creates new due to the copy
 @param[in]      **stack_1             The pointer on pointer on the shell of the spoiled stack
 @param[in]       *stack_2             The pointer on the shell of the copy of stack
 
-Returns  STACK_TRANSACTION_OK         If the stack was transacted
-         STACK_TRANSACTION_ERROR      If it was impossible to transact
+Returns  STACK_TRANSACTION_OK         If the stack was transacted\n
+         STACK_TRANSACTION_ERROR      If it was impossible to transact\n
 */
 stack_code        transaction         (Stack **stack_1, Stack *stack_2);
 
@@ -132,14 +132,14 @@ stack_code        transaction         (Stack **stack_1, Stack *stack_2);
 Checks all of the states of the stack
 @param[in]      *that_stack           The pointer on the shell of the stack
 
-Returns  STACK_OK                     If everything is ok
-         STACK_NULL                   If there wasn't pointers on units of stack
-         STACK_SEG_FAULT              If memory access denied
-         STACK_DELETED                If some of the units were deleted
-         STACK_DEAD_CANARY            If the stack was spoiled in bolders
-         STACK_INVADERS               If the stack was spoiled inside
-         STACK_TRANSACTION_ERROR      If the stack was spoiled and there were troubles with memory to fix it
-         STACK_TRANSACTION_OK         If the stack was spoiled and it was fixed
+Returns  STACK_OK                     If everything is ok\n
+         STACK_NULL                   If there wasn't pointers on units of stack\n
+         STACK_SEG_FAULT              If memory access denied\n
+         STACK_DELETED                If some of the units were deleted\n
+         STACK_DEAD_CANARY            If the stack was spoiled in bolders\n
+         STACK_INVADERS               If the stack was spoiled inside\n
+         STACK_TRANSACTION_ERROR      If the stack was spoiled and there were troubles with memory to fix it\n
+         STACK_TRANSACTION_OK         If the stack was spoiled and it was fixed\n
 */
 stack_code        stack_verifier      (Stack **that_stack);
 
@@ -164,14 +164,14 @@ stack_code        stack_construct     (Stack **that_stack, size_t stack_size);
 Destructs the stack
 @param[in]      **that_stack          The pointer on pointer on the shell of the stack
 
-Returns  STACK_OK                     If everything is ok
-         STACK_NULL                   If there wasn't pointers on units of stack
-         STACK_SEG_FAULT              If memory access denied
-         STACK_DELETED                If some of the units were deleted
-         STACK_DEAD_CANARY            If the stack was spoiled in bolders
-         STACK_INVADERS               If the stack was spoiled inside
-         STACK_TRANSACTION_ERROR      If the stack was spoiled and there were troubles with memory to fix it
-         STACK_TRANSACTION_OK         If the stack was spoiled and it was fixed
+Returns  STACK_OK                     If everything is ok\n
+         STACK_NULL                   If there wasn't pointers on units of stack\n
+         STACK_SEG_FAULT              If memory access denied\n
+         STACK_DELETED                If some of the units were deleted\n
+         STACK_DEAD_CANARY            If the stack was spoiled in bolders\n
+         STACK_INVADERS               If the stack was spoiled inside\n
+         STACK_TRANSACTION_ERROR      If the stack was spoiled and there were troubles with memory to fix it\n
+         STACK_TRANSACTION_OK         If the stack was spoiled and it was fixed\n
 */
 stack_code        stack_destruct      (Stack **that_stack);
 
@@ -179,16 +179,16 @@ stack_code        stack_destruct      (Stack **that_stack);
 Changes the capacity of the stack
 @param[in]      **that_stack          The pointer on pointer on the shell of the stack
 
-Returns  STACK_OK                     If everything is ok
-         STACK_NULL                   If there wasn't pointers on units of stack
-         STACK_SEG_FAULT              If memory access denied
-         STACK_DELETED                If some of the units were deleted
-         STACK_NO_MEMORY              If there is no memory to resize
-         STACK_TOO_BIG                If the needed memory is too big
-         STACK_DEAD_CANARY            If the stack was spoiled in bolders
-         STACK_INVADERS               If the stack was spoiled inside
-         STACK_TRANSACTION_ERROR      If the stack was spoiled and there were troubles with memory to fix it
-         STACK_TRANSACTION_OK         If the stack was spoiled and it was fixed
+Returns  STACK_OK                     If everything is ok\n
+         STACK_NULL                   If there wasn't pointers on units of stack\n
+         STACK_SEG_FAULT              If memory access denied\n
+         STACK_DELETED                If some of the units were deleted\n
+         STACK_NO_MEMORY              If there is no memory to resize\n
+         STACK_TOO_BIG                If the needed memory is too big\n
+         STACK_DEAD_CANARY            If the stack was spoiled in bolders\n
+         STACK_INVADERS               If the stack was spoiled inside\n
+         STACK_TRANSACTION_ERROR      If the stack was spoiled and there were troubles with memory to fix it\n
+         STACK_TRANSACTION_OK         If the stack was spoiled and it was fixed\n
 */
 stack_code        stack_resize        (Stack **that_stack, const double amount);
 
@@ -197,14 +197,14 @@ Adds value to the end of the stack
 @param[in]      **that_stack          The pointer on pointer on the shell of the stack
 @param[in]        value               The value wanted to be pushed
 
-Returns  STACK_OK                     If everything is ok
-         STACK_NULL                   If there wasn't pointers on units of stack
-         STACK_SEG_FAULT              If memory access denied
-         STACK_DELETED                If some of the units were deleted
-         STACK_DEAD_CANARY            If the stack was spoiled in bolders
-         STACK_INVADERS               If the stack was spoiled inside
-         STACK_TRANSACTION_ERROR      If the stack was spoiled and there were troubles with memory to fix it
-         STACK_TRANSACTION_OK         If the stack was spoiled and it was fixed
+Returns  STACK_OK                     If everything is ok\n
+         STACK_NULL                   If there wasn't pointers on units of stack\n
+         STACK_SEG_FAULT              If memory access denied\n
+         STACK_DELETED                If some of the units were deleted\n
+         STACK_DEAD_CANARY            If the stack was spoiled in bolders\n
+         STACK_INVADERS               If the stack was spoiled inside\n
+         STACK_TRANSACTION_ERROR      If the stack was spoiled and there were troubles with memory to fix it\n
+         STACK_TRANSACTION_OK         If the stack was spoiled and it was fixed\n
 */
 stack_code        stack_push          (Stack **that_stack, stack_elem value);
 
@@ -214,14 +214,14 @@ Delets value from the end of the stack
 @param[in]      **that_stack          The pointer on pointer on the shell of the stack
 @param[in]       *value               The pointer on the value wanted to be pushed
 
-Returns  STACK_OK                     If everything is ok
-         STACK_NULL                   If there wasn't pointers on units of stack
-         STACK_SEG_FAULT              If memory access denied
-         STACK_DELETED                If some of the units were deleted
-         STACK_DEAD_CANARY            If the stack was spoiled in bolders
-         STACK_INVADERS               If the stack was spoiled inside
-         STACK_TRANSACTION_ERROR      If the stack was spoiled and there were troubles with memory to fix it
-         STACK_TRANSACTION_OK         If the stack was spoiled and it was fixed
+Returns  STACK_OK                     If everything is ok\n
+         STACK_NULL                   If there wasn't pointers on units of stack\n
+         STACK_SEG_FAULT              If memory access denied\n
+         STACK_DELETED                If some of the units were deleted\n
+         STACK_DEAD_CANARY            If the stack was spoiled in bolders\n
+         STACK_INVADERS               If the stack was spoiled inside\n
+         STACK_TRANSACTION_ERROR      If the stack was spoiled and there were troubles with memory to fix it\n
+         STACK_TRANSACTION_OK         If the stack was spoiled and it was fixed\n
 */
 stack_code        stack_pop           (Stack **that_stack, stack_elem *value);
 
