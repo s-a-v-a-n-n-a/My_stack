@@ -8,8 +8,8 @@
     \warning Please, include math.h, stdlib.h and stdio.h to your file\n
              This stack works only with doubles
     \authors Anna Savchuk
-    \todo    Print out canaries and addresses
-    \date    Last update was 09.10.20 at 1:59
+    \note    If any function gets errors not like STACK_OK, they send it to stack_dump
+    \date    Last update was 09.10.20 at 2:37
 */
 
 typedef enum stack_code_errors { STACK_OK,
@@ -71,123 +71,160 @@ void              assertion           (stack_code code);
 
 /*!
 Outputs the information about the current state of the stack into the file
-@param[in]  *log            The file to write in
-@param[in]  *that_stack     The pointer on the shell of the stack
+@param[in]       *log                 The file to write in
+@param[in]       *that_stack          The pointer on the shell of the stack
 */
 void              print_state_stack   (FILE *log, Stack *that_stack);
 
 /*!
 Outputs the information about the current state of the stack into "log_file.txt"
-@param[in]  *that_stack     The pointer on the shell of the stack
-@param[in]  code            The code of the mistake
-@param[in]  who             The code o the function requested for dump
+@param[in]       *that_stack          The pointer on the shell of the stack
+@param[in]        code                The code of the mistake
+@param[in]        who                 The code o the function requested for dump
 */
 void              stack_dump          (Stack *that_stack, stack_code code, const char *who);
 
 /*!
 Checks if the pointer is valid
-@param[in]  *that_stack     The pointer on the shell of the stack
+@param[in]       *that_stack          The pointer on the shell of the stack
 
-Returns  STACK_NULL         If the pointer does not exists
-         STACK_SEG_FAULT    If the pointer points in prohibited for using block of memory
-         STACK_OK           If the pointer is valid
+Returns  STACK_NULL                   If the pointer does not exists
+         STACK_SEG_FAULT              If the pointer points in prohibited for using block of memory
+         STACK_OK                     If the pointer is valid
 */
 stack_code        is_pointer_valid    (Stack *that_stack);
 
 /*!
 Counts hash for the buffer in the stack by algorythm Adler-32
-@param[in]  *that_stack     The pointer on the shell of the stack
+@param[in]       *that_stack          The pointer on the shell of the stack
 
-@param[out] hash_sum        The hash of the buffer in the stack
+@param[out]       hash_sum            The hash of the buffer in the stack
 */
 long int          hashing_buffer      (Stack *that_stack);
 
 /*!
 Counts hash for the whole stack by algorythm Adler-32
-@param[in]  *that_stack     The pointer on the shell of the stack
+@param[in]       *that_stack          The pointer on the shell of the stack
 
-@param[out] hash_sum        The hash of the whole stack
+@param[out]       hash_sum            The hash of the whole stack
 */
 long int          hashing_stack       (Stack *that_stack);
 
 /*!
 Checks if the stack was spoiled and returns it to last saved correct version if it was
-@param[in]  *that_stack     The pointer on the shell of the stack
+@param[in]       *that_stack          The pointer on the shell of the stack
 
-Returns  STACK_CHANGED      If the stack was spoiled
-         STACK_OK           If everything is ok
+Returns  STACK_OK                     If everything is okay
 */
 stack_code        reserve_copy        (Stack **that_stack, Stack **copy_stack);
 
 /*!
 Frees the spoiled stack and creates new due to the copy
-@param[in]  **stack_1       The pointer on pointer on the shell of the spoiled stack
-@param[in]  *stack_2        The pointer on the shell of the copy of stack
+@param[in]      **stack_1             The pointer on pointer on the shell of the spoiled stack
+@param[in]       *stack_2             The pointer on the shell of the copy of stack
 
-Returns  STACK_CHANGED      If the stack was spoiled
-         STACK_OK           If everything is ok
+Returns  STACK_TRANSACTION_OK         If the stack was transacted
+         STACK_TRANSACTION_ERROR      If it was impossible to transact
 */
 stack_code        transaction         (Stack **stack_1, Stack *stack_2);
 
 /*!
 Checks all of the states of the stack
-@param[in]  *that_stack     The pointer on the shell of the stack
+@param[in]      *that_stack           The pointer on the shell of the stack
 
-Returns  STACK_CHANGED      If the stack was spoiled !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-         STACK_OK           If everything is ok
+Returns  STACK_OK                     If everything is ok
+         STACK_NULL                   If there wasn't pointers on units of stack
+         STACK_SEG_FAULT              If memory access denied
+         STACK_DELETED                If some of the units were deleted
+         STACK_DEAD_CANARY            If the stack was spoiled in bolders
+         STACK_INVADERS               If the stack was spoiled inside
+         STACK_TRANSACTION_ERROR      If the stack was spoiled and there were troubles with memory to fix it
+         STACK_TRANSACTION_OK         If the stack was spoiled and it was fixed
 */
 stack_code        stack_verifier      (Stack **that_stack);
 
 /*!
 Creates new stack
-@param[in]  size            The size of the future buffer of the stack
+@param[in]        size                The size of the future buffer of the stack
 
-@param[out] *stack_tmp      The pointer on the shell of the future stack
+@param[out]      *stack_tmp           The pointer on the shell of the future stack
 */
 Stack            *stack_new           (size_t size);
 
 /*!
 Constructs the stack
-@param[in]  **that_stack    The pointer on pointer on the shell of the future stack
+@param[in]      **that_stack          The pointer on pointer on the shell of the future stack
 
-Returns  STACK_OK           If everything is ok
+Returns  STACK_OK                     If everything is ok
+         STACK_NO_CONSTRUCT           If it was impossible to create the stack
 */
 stack_code        stack_construct     (Stack **that_stack, size_t stack_size);
 
 /*!
 Destructs the stack
-@param[in]  **that_stack    The pointer on pointer on the shell of the stack
+@param[in]      **that_stack          The pointer on pointer on the shell of the stack
 
-Returns  STACK_OK           If everything is ok
+Returns  STACK_OK                     If everything is ok
+         STACK_NULL                   If there wasn't pointers on units of stack
+         STACK_SEG_FAULT              If memory access denied
+         STACK_DELETED                If some of the units were deleted
+         STACK_DEAD_CANARY            If the stack was spoiled in bolders
+         STACK_INVADERS               If the stack was spoiled inside
+         STACK_TRANSACTION_ERROR      If the stack was spoiled and there were troubles with memory to fix it
+         STACK_TRANSACTION_OK         If the stack was spoiled and it was fixed
 */
 stack_code        stack_destruct      (Stack **that_stack);
 
 /*!
 Changes the capacity of the stack
-@param[in]  **that_stack    The pointer on pointer on the shell of the stack
+@param[in]      **that_stack          The pointer on pointer on the shell of the stack
 
-Returns  STACK_OK           If everything is ok
+Returns  STACK_OK                     If everything is ok
+         STACK_NULL                   If there wasn't pointers on units of stack
+         STACK_SEG_FAULT              If memory access denied
+         STACK_DELETED                If some of the units were deleted
+         STACK_NO_MEMORY              If there is no memory to resize
+         STACK_TOO_BIG                If the needed memory is too big
+         STACK_DEAD_CANARY            If the stack was spoiled in bolders
+         STACK_INVADERS               If the stack was spoiled inside
+         STACK_TRANSACTION_ERROR      If the stack was spoiled and there were troubles with memory to fix it
+         STACK_TRANSACTION_OK         If the stack was spoiled and it was fixed
 */
 stack_code        stack_resize        (Stack **that_stack, const double amount);
 
 /*!
 Adds value to the end of the stack
-@param[in]  **that_stack    The pointer on pointer on the shell of the stack
-@param[in]  value           The value wanted to be pushed
+@param[in]      **that_stack          The pointer on pointer on the shell of the stack
+@param[in]        value               The value wanted to be pushed
 
-Returns  STACK_OK           If everything is ok
+Returns  STACK_OK                     If everything is ok
+         STACK_NULL                   If there wasn't pointers on units of stack
+         STACK_SEG_FAULT              If memory access denied
+         STACK_DELETED                If some of the units were deleted
+         STACK_DEAD_CANARY            If the stack was spoiled in bolders
+         STACK_INVADERS               If the stack was spoiled inside
+         STACK_TRANSACTION_ERROR      If the stack was spoiled and there were troubles with memory to fix it
+         STACK_TRANSACTION_OK         If the stack was spoiled and it was fixed
 */
 stack_code        stack_push          (Stack **that_stack, stack_elem value);
 
 
 /*!
 Delets value from the end of the stack
-@param[in]  **that_stack    The pointer on pointer on the shell of the stack
-@param[in]  *value          The pointer on the value wanted to be pushed
+@param[in]      **that_stack          The pointer on pointer on the shell of the stack
+@param[in]       *value               The pointer on the value wanted to be pushed
 
-Returns  STACK_OK           If everything is ok
+Returns  STACK_OK                     If everything is ok
+         STACK_NULL                   If there wasn't pointers on units of stack
+         STACK_SEG_FAULT              If memory access denied
+         STACK_DELETED                If some of the units were deleted
+         STACK_DEAD_CANARY            If the stack was spoiled in bolders
+         STACK_INVADERS               If the stack was spoiled inside
+         STACK_TRANSACTION_ERROR      If the stack was spoiled and there were troubles with memory to fix it
+         STACK_TRANSACTION_OK         If the stack was spoiled and it was fixed
 */
 stack_code        stack_pop           (Stack **that_stack, stack_elem *value);
+
 
 void assertion (stack_code code)
 {
@@ -572,7 +609,7 @@ stack_code stack_construct(Stack **that_stack, size_t stack_size)
     if (!(*that_stack)->stack->buffer)
     {
         ASSERTION(STACK_NO_CONSTRUCT);
-        stack_dump((*that_stack), STACK_NO_MEMORY, STACK_CONSTRUCT);
+        stack_dump((*that_stack), STACK_NO_CONSTRUCT, STACK_CONSTRUCT);
         return STACK_NO_CONSTRUCT;
 
     }
