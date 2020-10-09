@@ -8,7 +8,7 @@
     \warning This stack works only with doubles
     \authors Anna Savchuk
     \note    If any function gets errors not like STACK_OK, they send it to stack_dump
-    \date    Last update was 09.10.20 at 10:23
+    \date    Last update was 09.10.20 at 11:06
 */
 
 #include <stdio.h>
@@ -180,7 +180,7 @@ stack_code        stack_destruct      (Stack **that_stack);
 
 /*!
 Changes the capacity of the stack
-@param[in]      **that_stack          The pointer on pointer on the shell of the stack
+@param[in]       *that_stack          The pointer on the shell of the stack
 
 Returns  STACK_OK                     If everything is ok\n
          STACK_NULL                   If there wasn't pointers on units of stack\n
@@ -193,7 +193,7 @@ Returns  STACK_OK                     If everything is ok\n
          STACK_TRANSACTION_ERROR      If the stack was spoiled and there were troubles with memory to fix it\n
          STACK_TRANSACTION_OK         If the stack was spoiled and it was fixed\n
 */
-stack_code        stack_resize        (Stack **that_stack, const double amount);
+stack_code        stack_resize        (Stack *that_stack, const double amount);
 
 /*!
 Adds value to the end of the stack
@@ -288,7 +288,7 @@ void stack_dump (Stack *that_stack, stack_code code, const char *who)
 {
     static long int doing = 0;
 
-    const char *mode =  "";
+    char *mode =  "";
     if (!doing)
         mode = "wb";
     else
@@ -476,7 +476,7 @@ stack_code transaction(Stack **stack_1, Stack *stack_2)
         return STACK_TRANSACTION_ERROR;
     }
 
-    reserve_copy(stack_1, &cage_copy);
+    reserve_copy(stack_1, &stack_2);
     return STACK_TRANSACTION_OK;
 }
 
@@ -543,7 +543,6 @@ stack_code stack_verifier (Stack **that_stack)
             cage_copy->stack->hash_stack = hash_tmp_copy;
 
             reserve_copy(that_stack, &cage_copy);
-
             return STACK_TRANSACTION_OK;
         }
         else if (!flag_hash_stack && !flag_hash_copy && flag_hash_stack_buf && !flag_hash_copy_buf)
@@ -790,7 +789,7 @@ stack_code stack_pop(Stack **that_stack, stack_elem *value)
     (*that_stack)->stack->hash_buffer = hashing_buffer((*that_stack));
     (*that_stack)->stack->hash_stack  = hashing_stack((*that_stack));
 
-    cage_copy->stack->buffer[cage_copy->stack->length--] = NAN;
+    cage_copy->stack->buffer[--cage_copy->stack->length] = NAN;
 
     cage_copy->stack->hash_buffer = hashing_buffer(cage_copy);
     cage_copy->stack->hash_stack  = hashing_stack(cage_copy);
