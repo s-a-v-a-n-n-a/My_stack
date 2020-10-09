@@ -288,7 +288,7 @@ void stack_dump (Stack *that_stack, stack_code code, const char *who)
 {
     static long int doing = 0;
 
-    char *mode =  "";
+    const char *mode =  "";
     if (!doing)
         mode = "wb";
     else
