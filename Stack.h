@@ -5,12 +5,15 @@
     There is also defend from wrong using of it.
 
     Thank you for using this program!
-    \warning Please, include math.h, stdlib.h and stdio.h to your file\n
-             This stack works only with doubles
+    \warning This stack works only with doubles
     \authors Anna Savchuk
     \note    If any function gets errors not like STACK_OK, they send it to stack_dump
-    \date    Last update was 09.10.20 at 2:45
+    \date    Last update was 09.10.20 at 10:23
 */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
 
 typedef enum stack_code_errors { STACK_OK,
                                  STACK_NULL,
@@ -36,9 +39,12 @@ typedef double stack_elem;
 #define elem "%lg"
 
 #define ASSERTION(code)                                                   \
-    fprintf(stderr, "-------------!WARNING!------------\n");              \
+    fprintf(stderr, "-----------------!WARNING!----------------\n");      \
     fprintf(stderr, "IN FILE %s\nIN LINE %d\n", __FILE__, __LINE__);      \
     assertion(code);                                                      \
+
+typedef struct Stack_struct Structure;
+typedef struct Defeat_stack Stack;
 
 struct Stack_struct
 {
@@ -54,12 +60,9 @@ struct Stack_struct
 struct Defeat_stack
 {
     int           canary_first;
-    Stack_struct *stack;
+    Structure    *stack;
     int           canary_last;
 };
-
-typedef struct Stack_struct Structure;
-typedef struct Defeat_stack Stack;
 
 static Stack *cage_copy;
 
@@ -207,7 +210,6 @@ Returns  STACK_OK                     If everything is ok\n
          STACK_TRANSACTION_OK         If the stack was spoiled and it was fixed\n
 */
 stack_code        stack_push          (Stack **that_stack, stack_elem value);
-
 
 /*!
 Delets value from the end of the stack
@@ -586,7 +588,7 @@ stack_code stack_verifier (Stack **that_stack)
 
 Stack *stack_new(size_t size)
 {
-    Stack *cage = {};
+    Stack *cage = NULL;
 
     if (stack_construct(&cage, size) == STACK_NO_CONSTRUCT)
     {
