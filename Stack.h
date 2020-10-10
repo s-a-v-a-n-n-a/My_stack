@@ -9,7 +9,7 @@
     \authors Anna Savchuk
     \note    If any function gets errors not like STACK_OK, they send it to stack_dump \n
              At the end the last information about stack will be added to log_file
-    \date    Last update was 10.10.20 at 13:12
+    \date    Last update was 10.10.20 at 15:18
 */
 
 #include <stdio.h>
@@ -52,7 +52,6 @@ struct Stack_struct
 {
     int         canary_before;
     stack_elem *buffer;
-    int         canary_after;
     size_t      length;
     size_t      capacity;
     long int    hash_buffer;
@@ -105,7 +104,7 @@ Counts hash for the buffer in the stack by algorythm Adler-32
 
 @param[out]       hash_sum            The hash of the buffer in the stack
 */
-long int          hashing_buffer      (Stack *that_stack);
+static long int   hashing_buffer      (Stack *that_stack);
 
 /*!
 Counts hash for the whole stack by algorythm Adler-32
@@ -113,7 +112,7 @@ Counts hash for the whole stack by algorythm Adler-32
 
 @param[out]       hash_sum            The hash of the whole stack
 */
-long int          hashing_stack       (Stack *that_stack);
+static long int   hashing_stack       (Stack *that_stack);
 
 /*!
 Checks if the stack was spoiled and returns it to last saved correct version if it was
@@ -121,7 +120,7 @@ Checks if the stack was spoiled and returns it to last saved correct version if 
 
 Returns  STACK_OK                     If everything is okay
 */
-stack_code        reserve_copy        (Stack **that_stack, Stack **copy_stack);
+static stack_code reserve_copy        (Stack **that_stack, Stack **copy_stack);
 
 /*!
 Frees the spoiled stack and creates new due to the copy
@@ -131,7 +130,7 @@ Frees the spoiled stack and creates new due to the copy
 Returns  STACK_TRANSACTION_OK         If the stack was transacted\n
          STACK_TRANSACTION_ERROR      If it was impossible to transact\n
 */
-stack_code        transaction         (Stack **stack_1, Stack *stack_2);
+static stack_code transaction         (Stack **stack_1, Stack *stack_2);
 
 /*!
 Checks all of the states of the stack
@@ -251,37 +250,37 @@ void assertion (stack_code code)
     switch (code)
     {
         case STACK_NULL:
-            printf("Error: NO POINTER ON STACK FOUND\n");
+            printf("Error: NO POINTER ON STACK FOUND\n\n");
             break;
         case STACK_SEG_FAULT:
-            printf("Error: USAGE OF PROHIBITED PART OF MEMORY\n");
+            printf("Error: USAGE OF PROHIBITED PART OF MEMORY\n\n");
             break;
         case STACK_DELETED:
-            printf("Error: DEALING WITH NON-EXISTENT UNIT OR THE UNIT WAS DAMAGED\n");
+            printf("Error: DEALING WITH NON-EXISTENT UNIT OR THE UNIT WAS DAMAGED\n\n");
             break;
         case STACK_NO_CONSTRUCT:
-            printf("Error: NO MEMORY FOR CONSTRUCTION\n");
+            printf("Error: NO MEMORY FOR CONSTRUCTION\n\n");
             break;
         case STACK_UNDERFLOW:
-            printf("Error: GOING OUT OF BONDS OF STACK\n");
+            printf("Error: GOING OUT OF BONDS OF STACK\n\n");
             break;
         case STACK_NO_MEMORY:
-            printf("Error: NO FREE MEMORY\n");
+            printf("Error: NO FREE MEMORY\n\n");
             break;
         case STACK_TOO_BIG:
-            printf("Error: TOO BIG CAPACITY REQUIRED\n");
+            printf("Error: TOO BIG CAPACITY REQUIRED\n\n");
             break;
         case STACK_DEAD_CANARY:
-            printf("Error: THE UNIT WAS DAMAGED\n");
+            printf("Error: THE UNIT WAS DAMAGED\n\n");
             break;
         case STACK_INVADERS:
-            printf("Error: OUTSIDE INVASION INSIDE OF STACK\n");
+            printf("Error: OUTSIDE INVASION INSIDE OF STACK\n\n");
             break;
         case STACK_TRANSACTION_ERROR:
-            printf("Error: ERROR OF MAKING A TRANSACTION\n");
+            printf("Error: ERROR OF MAKING A TRANSACTION\n\n");
             break;
         case STACK_TRANSACTION_OK:
-            printf("A TRANSACTION WAS MADE\n");
+            printf("A TRANSACTION WAS MADE\n\n");
             break;
         default:
             break;
@@ -291,7 +290,9 @@ void assertion (stack_code code)
 void print_state_stack(FILE *log, Stack *that_stack)
 {
     fprintf(log, "Current capacity: %zu\n", that_stack->stack->capacity);
-    fprintf(log, "Current size: %zu\n", that_stack->stack->length);
+    fprintf(log, "Current size    : %zu\n", that_stack->stack->length - 1);
+    fprintf(log, "Current address of the stack : %p\n", that_stack->stack);
+    fprintf(log, "Current address of the buffer: %p\n", that_stack->stack->buffer);
     for (size_t i = 0; i <= that_stack->stack->length; i++)
     {
         fprintf(log, "[%4zu] : " elem "\n", i, that_stack->stack->buffer[i]);
@@ -300,6 +301,8 @@ void print_state_stack(FILE *log, Stack *that_stack)
     {
         fprintf(log, "[%4zu] : NAN (POISON)\n", i);
     }
+    fprintf(log, "Current hash of the buffer: %ld\n", that_stack->stack->hash_buffer);
+    fprintf(log, "Current hash of the stack : %ld\n", that_stack->stack->hash_stack);
 }
 
 void stack_dump (Stack *that_stack, stack_code code, const char *who)
@@ -421,7 +424,7 @@ stack_code is_pointer_valid (Stack *that_stack)
     return STACK_OK;
 }
 
-long int hashing_buffer (Stack *that_stack)
+static long int hashing_buffer (Stack *that_stack)
 {
     long int hash_sum = 0;
 
@@ -440,7 +443,7 @@ long int hashing_buffer (Stack *that_stack)
     return hash_sum;
 }
 
-long int hashing_stack (Stack *that_stack)
+static long int hashing_stack (Stack *that_stack)
 {
     long int hash_tmp             = that_stack->stack->hash_stack;
     that_stack->stack->hash_stack = 0;
@@ -458,23 +461,23 @@ long int hashing_stack (Stack *that_stack)
     return sum;
 }
 
-stack_code reserve_copy (Stack **that_stack, Stack **copy_stack)
+static stack_code reserve_copy (Stack **that_stack, Stack **copy_stack)
 {
-    (*that_stack)->stack->hash_stack  = (*copy_stack)->stack->hash_stack;
-    (*that_stack)->stack->hash_buffer = (*copy_stack)->stack->hash_buffer;
     (*that_stack)->stack->length      = (*copy_stack)->stack->length;
     (*that_stack)->stack->capacity    = (*copy_stack)->stack->capacity;
 
-    for (size_t i = 0; i < (*copy_stack)->stack->length; i++)
+    for (size_t i = 0; i <= (*copy_stack)->stack->length; i++)
     {
         (*that_stack)->stack->buffer[i] = (*copy_stack)->stack->buffer[i];
     }
-    (*that_stack)->stack->buffer[(*that_stack)->stack->length] = NAN;
+
+    (*that_stack)->stack->hash_buffer = hashing_buffer(*that_stack);
+    (*that_stack)->stack->hash_stack  = hashing_stack(*that_stack);
 
     return STACK_OK;
 }
 
-stack_code transaction(Stack **stack_1, Stack *stack_2)
+static stack_code transaction(Stack **stack_1, Stack *stack_2)
 {
     free((*stack_1)->stack->buffer);
     free((*stack_1)->stack);
@@ -532,22 +535,14 @@ stack_code stack_verifier (Stack **that_stack)
         {
             return STACK_DELETED;
         }
-        else if (!flag_eq && !isnan((float)(*that_stack)->stack->buffer[(*that_stack)->stack->length]))
+        else if (!flag_eq && !isnan((float)(*that_stack)->stack->buffer[(*that_stack)->stack->length]) ||
+                 !flag_hash_stack && flag_hash_copy && !flag_hash_stack_buf && flag_hash_copy_buf)
         {
             stack_code code = transaction(that_stack, cage_copy);
             return code;
         }
-        else if (!flag_eq && !isnan((float)(cage_copy)->stack->buffer[cage_copy->stack->length]))
-        {
-            stack_code code = transaction(&cage_copy, *that_stack);
-            return code;
-        }
-        else if (!flag_hash_stack && flag_hash_copy && !flag_hash_stack_buf && flag_hash_copy_buf)
-        {
-            stack_code code = transaction(that_stack, cage_copy);
-            return code;
-        }
-        else if(flag_hash_stack && !flag_hash_copy && flag_hash_stack_buf && !flag_hash_copy_buf)
+        else if (!flag_eq && !isnan((float)(cage_copy)->stack->buffer[cage_copy->stack->length]) ||
+                 flag_hash_stack && !flag_hash_copy && flag_hash_stack_buf && !flag_hash_copy_buf)
         {
             stack_code code = transaction(&cage_copy, *that_stack);
             return code;
@@ -567,7 +562,7 @@ stack_code stack_verifier (Stack **that_stack)
             cage_copy->stack->capacity   = new_len + 2;
             cage_copy->stack->hash_stack = hash_tmp_copy;
 
-            reserve_copy(that_stack, &cage_copy);
+            reserve_copy(&cage_copy, that_stack);
             return STACK_TRANSACTION_OK;
         }
         else if (!(flag_hash_stack && flag_hash_copy && flag_hash_copy_buf) && flag_hash_stack_buf)
@@ -585,7 +580,7 @@ stack_code stack_verifier (Stack **that_stack)
             (*that_stack)->stack->capacity   = new_len + 2;
             (*that_stack)->stack->hash_stack = hash_tmp_stack;
 
-            reserve_copy(&cage_copy, that_stack);
+            reserve_copy(that_stack, &cage_copy);
             return STACK_TRANSACTION_OK;
         }
         else if (!(flag_hash_stack && flag_hash_copy && flag_hash_stack_buf && flag_hash_copy_buf))
