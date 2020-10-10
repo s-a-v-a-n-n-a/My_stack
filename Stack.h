@@ -9,7 +9,7 @@
     \authors Anna Savchuk
     \note    If any function gets errors not like STACK_OK, they send it to stack_dump \n
              At the end the last information about stack will be added to log_file
-    \date    Last update was 10.10.20 at 15:18
+    \date    Last update was 10.10.20 at 21:43
 */
 
 #include <stdio.h>
@@ -44,6 +44,36 @@ typedef double stack_elem;
     fprintf(stderr, "-----------------!WARNING!----------------\n");      \
     fprintf(stderr, "IN FILE %s\nIN LINE %d\n", __FILE__, __LINE__);      \
     assertion(code);                                                      \
+
+
+#define VERIFYING(that_stack);                                            \
+    stack_code check = stack_verifier(that_stack);                        \
+    if (check == STACK_TRANSACTION_OK)                                    \
+    {                                                                     \
+        ASSERTION(check);                                                 \
+        stack_dump((*that_stack), check, STACK_POP);                      \
+    }                                                                     \
+    else if (check != STACK_OK)                                           \
+    {                                                                     \
+        ASSERTION(check);                                                 \
+        stack_dump((*that_stack), check, STACK_POP);                      \
+    }                                                                     \
+
+
+#define VERIFYING_DESTRUCT(that_stack);                                   \
+    stack_code check = stack_verifier(that_stack);                        \
+    if (check == STACK_TRANSACTION_OK)                                    \
+    {                                                                     \
+        ASSERTION(check);                                                 \
+        stack_dump((*that_stack), check, STACK_POP);                      \
+    }                                                                     \
+    else if (check != STACK_OK)                                           \
+    {                                                                     \
+        ASSERTION(check);                                                 \
+        stack_dump((*that_stack), check, STACK_POP);                      \
+    }                                                                     \
+    else                                                                  \
+        stack_dump(*that_stack, STACK_OK, STACK_DESTRUCT);                                                                     \
 
 typedef struct Stack_struct Structure;
 typedef struct Defeat_stack Stack;
@@ -194,7 +224,7 @@ Returns  STACK_OK                     If everything is ok\n
          STACK_TRANSACTION_ERROR      If the stack was spoiled and there were troubles with memory to fix it\n
          STACK_TRANSACTION_OK         If the stack was spoiled and it was fixed\n
 */
-stack_code        stack_resize        (Stack *that_stack, const double amount);
+stack_code        stack_resize        (Stack **that_stack, const double amount);
 
 /*!
 Adds value to the end of the stack
@@ -655,20 +685,7 @@ stack_code stack_construct(Stack **that_stack, size_t stack_size)
 
 stack_code stack_destruct(Stack **that_stack)
 {
-    stack_code check = stack_verifier(that_stack);
-    if (check == STACK_TRANSACTION_OK)
-    {
-        ASSERTION(check);
-        stack_dump(*that_stack, check, STACK_DESTRUCT);
-    }
-    else if (check != STACK_OK)
-    {
-        ASSERTION(check);
-        stack_dump(*that_stack, check, STACK_DESTRUCT);
-        return check;
-    }
-    else
-        stack_dump(*that_stack, STACK_OK, STACK_DESTRUCT);
+    VERIFYING_DESTRUCT(that_stack);
 
     if (*that_stack)
     {
@@ -695,61 +712,40 @@ stack_code stack_destruct(Stack **that_stack)
     return STACK_OK;
 }
 
-stack_code stack_resize(Stack *that_stack, const double amount)
+stack_code stack_resize(Stack **that_stack, const double amount)
 {
-    stack_code check = stack_verifier(&that_stack);
-    if (check == STACK_TRANSACTION_OK)
-    {
-        ASSERTION(check);
-        stack_dump(that_stack, check, STACK_RESIZE);
-    }
-    else if (check != STACK_OK)
-    {
-        ASSERTION(check);
-        stack_dump(that_stack, check, STACK_RESIZE);
-    }
+    VERIFYING(that_stack);
 
-    if (that_stack->stack->capacity > ((size_t)-1)/2)
+    if ((*that_stack)->stack->capacity > ((size_t)-1)/2)
     {
         ASSERTION(STACK_TOO_BIG);
-        stack_dump(that_stack, STACK_TOO_BIG, STACK_RESIZE);
+        stack_dump((*that_stack), STACK_TOO_BIG, STACK_RESIZE);
     }
 
-    size_t new_capacity = (size_t)(that_stack->stack->capacity * amount) + 2;
+    size_t new_capacity = (size_t)((*that_stack)->stack->capacity * amount) + 2;
 
-    stack_elem *ptr = (stack_elem*)realloc(that_stack->stack->buffer, sizeof(stack_elem) * new_capacity);
+    stack_elem *ptr = (stack_elem*)realloc((*that_stack)->stack->buffer, sizeof(stack_elem) * new_capacity);
 
     if (!ptr)
     {
         ASSERTION(STACK_NO_MEMORY);
-        stack_dump(that_stack, STACK_NO_MEMORY, STACK_RESIZE);
+        stack_dump((*that_stack), STACK_NO_MEMORY, STACK_RESIZE);
     }
 
-    that_stack->stack->capacity = new_capacity;
-    that_stack->stack->buffer   = ptr;
+    (*that_stack)->stack->capacity = new_capacity;
+    (*that_stack)->stack->buffer   = ptr;
 
     return STACK_OK;
 }
 
 stack_code stack_push(Stack **that_stack, const stack_elem value)
 {
-    stack_code check = stack_verifier(that_stack);
-    if (check == STACK_TRANSACTION_OK)
-    {
-        ASSERTION(check);
-        stack_dump((*that_stack), check, STACK_PUSH);
-    }
-    else if (check != STACK_OK)
-    {
-        ASSERTION(check);
-        stack_dump((*that_stack), check, STACK_PUSH);
-        return check;
-    }
+    VERIFYING(that_stack);
 
     if ((*that_stack)->stack->length + 1 >= (*that_stack)->stack->capacity)
     {
-        stack_resize((*that_stack), 2);
-        stack_resize(cage_copy,  2);
+        stack_resize(that_stack, 2);
+        stack_resize(&cage_copy, 2);
     }
 
     (*that_stack)->stack->buffer[(*that_stack)->stack->length++] = value;
@@ -769,17 +765,7 @@ stack_code stack_push(Stack **that_stack, const stack_elem value)
 
 stack_code stack_pop(Stack **that_stack, stack_elem *value)
 {
-    stack_code check = stack_verifier(that_stack);
-    if (check == STACK_TRANSACTION_OK)
-    {
-        ASSERTION(check);
-        stack_dump((*that_stack), check, STACK_POP);
-    }
-    else if (check != STACK_OK)
-    {
-        ASSERTION(check);
-        stack_dump((*that_stack), check, STACK_POP);
-    }
+    VERIFYING(that_stack);
 
     if ((long long int)((*that_stack)->stack->length) - 1 <= 0)
     {
@@ -790,8 +776,8 @@ stack_code stack_pop(Stack **that_stack, stack_elem *value)
 
     if ((*that_stack)->stack->length <= (*that_stack)->stack->capacity/2)
     {
-        stack_resize((*that_stack), 0.5);
-        stack_resize(cage_copy,  0.5);
+        stack_resize(that_stack, 0.5);
+        stack_resize(&cage_copy, 0.5);
     }
 
     *value = (*that_stack)->stack->buffer[--(*that_stack)->stack->length];
@@ -810,17 +796,7 @@ stack_code stack_pop(Stack **that_stack, stack_elem *value)
 
 stack_code stack_back(Stack **that_stack, stack_elem *value)
 {
-    stack_code check = stack_verifier(that_stack);
-    if (check == STACK_TRANSACTION_OK)
-    {
-        ASSERTION(check);
-        stack_dump((*that_stack), check, STACK_BACK);
-    }
-    else if (check != STACK_OK)
-    {
-        ASSERTION(check);
-        stack_dump((*that_stack), check, STACK_BACK);
-    }
+    VERIFYING(that_stack);
 
     if ((long long int)((*that_stack)->stack->length) - 1 <= 0)
     {
