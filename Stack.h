@@ -1,14 +1,15 @@
 /**
     \file
     File with functions for using my stack
-    It has constructor, destructor, push, pop and resize.
+    It has constructor, destructor, push, pop, back and resize.
     There is also defend from wrong using of it.
 
     Thank you for using this program!
-    \warning This stack works only with doubles
+    \warning This stack works only with doubles \n
     \authors Anna Savchuk
-    \note    If any function gets errors not like STACK_OK, they send it to stack_dump
-    \date    Last update was 09.10.20 at 11:06
+    \note    If any function gets errors not like STACK_OK, they send it to stack_dump \n
+             At the end the last information about stack will be added to log_file
+    \date    Last update was 10.10.20 at 13:12
 */
 
 #include <stdio.h>
@@ -34,6 +35,7 @@ const char *STACK_DESTRUCT      = "DESTRUCTOR";
 const char *STACK_PUSH          = "PUSHING";
 const char *STACK_RESIZE        = "RESIZING";
 const char *STACK_POP           = "POPPING";
+const char *STACK_BACK          = "LOOKING BACK";
 
 typedef double stack_elem;
 #define elem "%lg"
@@ -227,6 +229,22 @@ Returns  STACK_OK                     If everything is ok\n
 */
 stack_code        stack_pop           (Stack **that_stack, stack_elem *value);
 
+/*!
+Shows value from the end of the stack
+@param[in]      **that_stack          The pointer on pointer on the shell of the stack
+@param[in]       *value               The pointer on the value wanted to be pushed
+
+Returns  STACK_OK                     If everything is ok\n
+         STACK_NULL                   If there wasn't pointers on units of stack\n
+         STACK_SEG_FAULT              If memory access denied\n
+         STACK_DELETED                If some of the units were deleted\n
+         STACK_DEAD_CANARY            If the stack was spoiled in bolders\n
+         STACK_INVADERS               If the stack was spoiled inside\n
+         STACK_TRANSACTION_ERROR      If the stack was spoiled and there were troubles with memory to fix it\n
+         STACK_TRANSACTION_OK         If the stack was spoiled and it was fixed\n
+*/
+stack_code stack_back(Stack **that_stack, stack_elem *value);
+
 
 void assertion (stack_code code)
 {
@@ -272,15 +290,15 @@ void assertion (stack_code code)
 
 void print_state_stack(FILE *log, Stack *that_stack)
 {
-    fprintf(log, "Current capacity: %u\n", that_stack->stack->capacity);
-    fprintf(log, "Current size: %u\n", that_stack->stack->length);
+    fprintf(log, "Current capacity: %zu\n", that_stack->stack->capacity);
+    fprintf(log, "Current size: %zu\n", that_stack->stack->length);
     for (size_t i = 0; i <= that_stack->stack->length; i++)
     {
-        fprintf(log, "[%4u] : " elem "\n", i, that_stack->stack->buffer[i]);
+        fprintf(log, "[%4zu] : " elem "\n", i, that_stack->stack->buffer[i]);
     }
-    for (size_t i = that_stack->stack->length; i < that_stack->stack->capacity; i++)
+    for (size_t i = that_stack->stack->length + 1; i < that_stack->stack->capacity; i++)
     {
-        fprintf(log, "[%4u] : %s\n", i, "NAN (POISON)");
+        fprintf(log, "[%4zu] : NAN (POISON)\n", i);
     }
 }
 
@@ -288,7 +306,7 @@ void stack_dump (Stack *that_stack, stack_code code, const char *who)
 {
     static long int doing = 0;
 
-    char *mode =  "";
+    const char *mode =  "";
     if (!doing)
         mode = "wb";
     else
@@ -394,8 +412,8 @@ stack_code is_pointer_valid (Stack *that_stack)
     if ((long long)(that_stack->stack) <= 4096 || (long long)(that_stack->stack->buffer) <= 4096)
         return STACK_SEG_FAULT;
 
-    if (*(int *)that_stack != 0x5E7CA6E || *(int *)that_stack->stack != 0xDEADB14D ||
-        !isnan(that_stack->stack->buffer[0]))
+    if (*(unsigned int *)that_stack != 0x5E7CA6E || *(unsigned int *)that_stack->stack != 0xDEADB14D ||
+        !isnan((float)that_stack->stack->buffer[0]))
     {
         return STACK_DELETED;
     }
@@ -493,14 +511,14 @@ stack_code stack_verifier (Stack **that_stack)
         return indicator;
     }
 
-    long int flag_eq            = ((*that_stack)->stack->buffer[(*that_stack)->stack->length] ==
-                                   cage_copy ->stack->buffer[cage_copy ->stack->length]);
+    long int flag_eq              = ((*that_stack)->stack->buffer[(*that_stack)->stack->length] ==
+                                      cage_copy ->stack->buffer[cage_copy ->stack->length]);
 
-    long int hash_tmp_stack     = hashing_stack(*that_stack);
-    long int hash_tmp_stack_buf = hashing_buffer(*that_stack);
+    long int hash_tmp_stack       = hashing_stack(*that_stack);
+    long int hash_tmp_stack_buf   = hashing_buffer(*that_stack);
 
-    long int hash_tmp_copy      = hashing_stack(cage_copy);
-    long int hash_tmp_copy_buf  = hashing_buffer(cage_copy);
+    long int hash_tmp_copy        = hashing_stack(cage_copy);
+    long int hash_tmp_copy_buf    = hashing_buffer(cage_copy);
 
     long int flag_hash_stack      = (hash_tmp_stack == (*that_stack)->stack->hash_stack);
     long int flag_hash_copy       = (hash_tmp_copy  == cage_copy->stack->hash_stack);
@@ -509,59 +527,20 @@ stack_code stack_verifier (Stack **that_stack)
 
     if ((*that_stack)->canary_first == 0x5E7CA6E && (*that_stack)->canary_last == 0x0FFCA6E)
     {
-        if (flag_eq && (!isnan((*that_stack)->stack->buffer[(*that_stack)->stack->length]) || !isnan((cage_copy)->stack->buffer[cage_copy->stack->length])))
+        if (flag_eq && (!isnan((float)(*that_stack)->stack->buffer[(*that_stack)->stack->length]) ||
+                        !isnan((float)(cage_copy)->stack->buffer[cage_copy->stack->length])))
         {
             return STACK_DELETED;
         }
-        else if (!flag_eq && !isnan((*that_stack)->stack->buffer[(*that_stack)->stack->length]))
+        else if (!flag_eq && !isnan((float)(*that_stack)->stack->buffer[(*that_stack)->stack->length]))
         {
             stack_code code = transaction(that_stack, cage_copy);
             return code;
         }
-        else if (!flag_eq && !isnan((cage_copy)->stack->buffer[cage_copy->stack->length]))
+        else if (!flag_eq && !isnan((float)(cage_copy)->stack->buffer[cage_copy->stack->length]))
         {
             stack_code code = transaction(&cage_copy, *that_stack);
             return code;
-        }
-        else if (!flag_hash_stack && !flag_hash_copy && !flag_hash_stack_buf && !flag_hash_copy_buf)
-        {
-            return STACK_INVADERS;
-        }
-        else if (!flag_hash_stack && !flag_hash_copy && !flag_hash_stack_buf && flag_hash_copy_buf)
-        {
-            long int i       = 1;
-            long int new_len = 0;
-
-            while(!isnan(cage_copy->stack->buffer[i]))
-            {
-                new_len++;
-                i++;
-            }
-
-            cage_copy->stack->length     = new_len;
-            cage_copy->stack->capacity   = new_len + 1;
-            cage_copy->stack->hash_stack = hash_tmp_copy;
-
-            reserve_copy(that_stack, &cage_copy);
-            return STACK_TRANSACTION_OK;
-        }
-        else if (!flag_hash_stack && !flag_hash_copy && flag_hash_stack_buf && !flag_hash_copy_buf)
-        {
-            long int i       = 1;
-            long int new_len = 0;
-
-            while(!isnan((*that_stack)->stack->buffer[i]))
-            {
-                new_len++;
-                i++;
-            }
-
-            (*that_stack)->stack->length     = new_len;
-            (*that_stack)->stack->capacity   = new_len + 1;
-            (*that_stack)->stack->hash_stack = hash_tmp_stack;
-
-            reserve_copy(&cage_copy, that_stack);
-            return STACK_TRANSACTION_OK;
         }
         else if (!flag_hash_stack && flag_hash_copy && !flag_hash_stack_buf && flag_hash_copy_buf)
         {
@@ -572,6 +551,42 @@ stack_code stack_verifier (Stack **that_stack)
         {
             stack_code code = transaction(&cage_copy, *that_stack);
             return code;
+        }
+        else if (!(flag_hash_stack && flag_hash_copy && flag_hash_stack_buf) && flag_hash_copy_buf)
+        {
+            long int i       = 1;
+            long int new_len = 0;
+
+            while(!isnan((float)cage_copy->stack->buffer[i]))
+            {
+                new_len++;
+                i++;
+            }
+
+            cage_copy->stack->length     = new_len + 1;
+            cage_copy->stack->capacity   = new_len + 2;
+            cage_copy->stack->hash_stack = hash_tmp_copy;
+
+            reserve_copy(that_stack, &cage_copy);
+            return STACK_TRANSACTION_OK;
+        }
+        else if (!(flag_hash_stack && flag_hash_copy && flag_hash_copy_buf) && flag_hash_stack_buf)
+        {
+            long int i       = 1;
+            long int new_len = 0;
+
+            while(!isnan((float)(*that_stack)->stack->buffer[i]))
+            {
+                new_len++;
+                i++;
+            }
+
+            (*that_stack)->stack->length     = new_len + 1;
+            (*that_stack)->stack->capacity   = new_len + 2;
+            (*that_stack)->stack->hash_stack = hash_tmp_stack;
+
+            reserve_copy(&cage_copy, that_stack);
+            return STACK_TRANSACTION_OK;
         }
         else if (!(flag_hash_stack && flag_hash_copy && flag_hash_stack_buf && flag_hash_copy_buf))
         {
@@ -770,7 +785,8 @@ stack_code stack_pop(Stack **that_stack, stack_elem *value)
         ASSERTION(check);
         stack_dump((*that_stack), check, STACK_POP);
     }
-    if ((*that_stack)->stack->length <= 0)
+
+    if ((long long int)((*that_stack)->stack->length) - 1 <= 0)
     {
         ASSERTION(STACK_UNDERFLOW);
         stack_dump((*that_stack), STACK_UNDERFLOW, STACK_POP);
@@ -793,6 +809,32 @@ stack_code stack_pop(Stack **that_stack, stack_elem *value)
 
     cage_copy->stack->hash_buffer = hashing_buffer(cage_copy);
     cage_copy->stack->hash_stack  = hashing_stack(cage_copy);
+
+    return STACK_OK;
+}
+
+stack_code stack_back(Stack **that_stack, stack_elem *value)
+{
+    stack_code check = stack_verifier(that_stack);
+    if (check == STACK_TRANSACTION_OK)
+    {
+        ASSERTION(check);
+        stack_dump((*that_stack), check, STACK_BACK);
+    }
+    else if (check != STACK_OK)
+    {
+        ASSERTION(check);
+        stack_dump((*that_stack), check, STACK_BACK);
+    }
+
+    if ((long long int)((*that_stack)->stack->length) - 1 <= 0)
+    {
+        ASSERTION(STACK_UNDERFLOW);
+        stack_dump((*that_stack), STACK_UNDERFLOW, STACK_BACK);
+        return STACK_UNDERFLOW;
+    }
+
+    *value = (*that_stack)->stack->buffer[(*that_stack)->stack->length - 1];
 
     return STACK_OK;
 }
