@@ -9,7 +9,7 @@
     \authors Anna Savchuk
     \note    If any function gets errors not like STACK_OK, they send it to stack_dump \n
              At the end the last information about stack will be added to log_file
-    \date    Last update was 10.10.20 at 21:43
+    \date    Last update was 10.24.20 at 22:40
 */
 
 #include <stdio.h>
@@ -46,31 +46,21 @@ typedef double stack_elem;
     assertion(code);                                                      \
 
 
-#define VERIFYING(that_stack);                                            \
+#define VERIFYING(that_stack, mode);                                      \
     stack_code check = stack_verifier(that_stack);                        \
-    if (check == STACK_TRANSACTION_OK)                                    \
+    if (check != STACK_OK)                                                \
     {                                                                     \
         ASSERTION(check);                                                 \
-        stack_dump((*that_stack), check, STACK_POP);                      \
-    }                                                                     \
-    else if (check != STACK_OK)                                           \
-    {                                                                     \
-        ASSERTION(check);                                                 \
-        stack_dump((*that_stack), check, STACK_POP);                      \
+        stack_dump((*that_stack), check, mode);                           \
     }                                                                     \
 
 
 #define VERIFYING_DESTRUCT(that_stack);                                   \
     stack_code check = stack_verifier(that_stack);                        \
-    if (check == STACK_TRANSACTION_OK)                                    \
+    if (check != STACK_OK)                                                \
     {                                                                     \
         ASSERTION(check);                                                 \
-        stack_dump((*that_stack), check, STACK_POP);                      \
-    }                                                                     \
-    else if (check != STACK_OK)                                           \
-    {                                                                     \
-        ASSERTION(check);                                                 \
-        stack_dump((*that_stack), check, STACK_POP);                      \
+        stack_dump((*that_stack), check, STACK_DESTRUCT);                 \
     }                                                                     \
     else                                                                  \
         stack_dump(*that_stack, STACK_OK, STACK_DESTRUCT);                                                                     \
@@ -114,7 +104,7 @@ void              print_state_stack   (FILE *log, Stack *that_stack);
 Outputs the information about the current state of the stack into "log_file.txt"
 @param[in]       *that_stack          The pointer on the shell of the stack
 @param[in]        code                The code of the mistake
-@param[in]        who                 The code o the function requested for dump
+@param[in]        who                 The code of the function requested for dump
 */
 void              stack_dump          (Stack *that_stack, stack_code code, const char *who);
 
@@ -319,17 +309,17 @@ void assertion (stack_code code)
 
 void print_state_stack(FILE *log, Stack *that_stack)
 {
-    fprintf(log, "Current capacity: %zu\n", that_stack->stack->capacity);
-    fprintf(log, "Current size    : %zu\n", that_stack->stack->length - 1);
+    fprintf(log, "Current capacity: %lu\n", that_stack->stack->capacity);
+    fprintf(log, "Current size    : %lu\n", that_stack->stack->length - 1);
     fprintf(log, "Current address of the stack : %p\n", that_stack->stack);
     fprintf(log, "Current address of the buffer: %p\n", that_stack->stack->buffer);
     for (size_t i = 0; i <= that_stack->stack->length; i++)
     {
-        fprintf(log, "[%4zu] : " elem "\n", i, that_stack->stack->buffer[i]);
+        fprintf(log, "[%4lu] : " elem "\n", i, that_stack->stack->buffer[i]);
     }
     for (size_t i = that_stack->stack->length + 1; i < that_stack->stack->capacity; i++)
     {
-        fprintf(log, "[%4zu] : NAN (POISON)\n", i);
+        fprintf(log, "[%4lu] : NAN (POISON)\n", i);
     }
     fprintf(log, "Current hash of the buffer: %ld\n", that_stack->stack->hash_buffer);
     fprintf(log, "Current hash of the stack : %ld\n", that_stack->stack->hash_stack);
@@ -565,14 +555,14 @@ stack_code stack_verifier (Stack **that_stack)
         {
             return STACK_DELETED;
         }
-        else if (!flag_eq && !isnan((float)(*that_stack)->stack->buffer[(*that_stack)->stack->length]) ||
-                 !flag_hash_stack && flag_hash_copy && !flag_hash_stack_buf && flag_hash_copy_buf)
+        else if ((!flag_eq && !isnan((float)(*that_stack)->stack->buffer[(*that_stack)->stack->length])) ||
+                 (!flag_hash_stack && flag_hash_copy && !flag_hash_stack_buf && flag_hash_copy_buf))
         {
             stack_code code = transaction(that_stack, cage_copy);
             return code;
         }
-        else if (!flag_eq && !isnan((float)(cage_copy)->stack->buffer[cage_copy->stack->length]) ||
-                 flag_hash_stack && !flag_hash_copy && flag_hash_stack_buf && !flag_hash_copy_buf)
+        else if ((!flag_eq && !isnan((float)(cage_copy)->stack->buffer[cage_copy->stack->length])) ||
+                 (flag_hash_stack && !flag_hash_copy && flag_hash_stack_buf && !flag_hash_copy_buf))
         {
             stack_code code = transaction(&cage_copy, *that_stack);
             return code;
@@ -714,7 +704,7 @@ stack_code stack_destruct(Stack **that_stack)
 
 stack_code stack_resize(Stack **that_stack, const double amount)
 {
-    VERIFYING(that_stack);
+    VERIFYING(that_stack, STACK_RESIZE);
 
     if ((*that_stack)->stack->capacity > ((size_t)-1)/2)
     {
@@ -740,7 +730,7 @@ stack_code stack_resize(Stack **that_stack, const double amount)
 
 stack_code stack_push(Stack **that_stack, const stack_elem value)
 {
-    VERIFYING(that_stack);
+    VERIFYING(that_stack, STACK_PUSH);
 
     if ((*that_stack)->stack->length + 1 >= (*that_stack)->stack->capacity)
     {
@@ -765,19 +755,13 @@ stack_code stack_push(Stack **that_stack, const stack_elem value)
 
 stack_code stack_pop(Stack **that_stack, stack_elem *value)
 {
-    VERIFYING(that_stack);
+    VERIFYING(that_stack, STACK_POP);
 
     if ((long long int)((*that_stack)->stack->length) - 1 <= 0)
     {
         ASSERTION(STACK_UNDERFLOW);
         stack_dump((*that_stack), STACK_UNDERFLOW, STACK_POP);
         return STACK_UNDERFLOW;
-    }
-
-    if ((*that_stack)->stack->length <= (*that_stack)->stack->capacity/2)
-    {
-        stack_resize(that_stack, 0.5);
-        stack_resize(&cage_copy, 0.5);
     }
 
     *value = (*that_stack)->stack->buffer[--(*that_stack)->stack->length];
@@ -791,12 +775,18 @@ stack_code stack_pop(Stack **that_stack, stack_elem *value)
     cage_copy->stack->hash_buffer = hashing_buffer(cage_copy);
     cage_copy->stack->hash_stack  = hashing_stack(cage_copy);
 
+    if ((*that_stack)->stack->length <= (*that_stack)->stack->capacity/4)
+    {
+        stack_resize(that_stack, 0.5);
+        stack_resize(&cage_copy, 0.5);
+    }
+
     return STACK_OK;
 }
 
 stack_code stack_back(Stack **that_stack, stack_elem *value)
 {
-    VERIFYING(that_stack);
+    VERIFYING(that_stack, STACK_BACK);
 
     if ((long long int)((*that_stack)->stack->length) - 1 <= 0)
     {
