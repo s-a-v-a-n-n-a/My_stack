@@ -16,4 +16,4 @@
 **NOTES**
 ---------
 This program is educational. It is modified for future works but is not updated in this repository. I did this to make my progress more visible.
-Modified version can be found in repository ![My-CPU](https://github.com/s-a-v-a-n-n-a/My-CPU).
+Modified version can be found in repository [My-CPU](https://github.com/s-a-v-a-n-n-a/My-CPU).
