@@ -16,18 +16,21 @@
 #include <stdlib.h>
 #include <math.h>
 
-typedef enum stack_code_errors { STACK_OK,
-                                 STACK_NULL,
-                                 STACK_SEG_FAULT,
-                                 STACK_DELETED,
-                                 STACK_NO_CONSTRUCT,
-                                 STACK_UNDERFLOW,
-                                 STACK_NO_MEMORY,
-                                 STACK_TOO_BIG,
-                                 STACK_DEAD_CANARY,
-                                 STACK_INVADERS,
-                                 STACK_TRANSACTION_ERROR,
-                                 STACK_TRANSACTION_OK    } stack_code;
+typedef enum stack_code_errors 
+{ 
+     STACK_OK,
+     STACK_NULL,
+     STACK_SEG_FAULT,
+     STACK_DELETED,
+     STACK_NO_CONSTRUCT,
+     STACK_UNDERFLOW,
+     STACK_NO_MEMORY,
+     STACK_TOO_BIG,
+     STACK_DEAD_CANARY,
+     STACK_INVADERS,
+     STACK_TRANSACTION_ERROR,
+     STACK_TRANSACTION_OK    
+} stack_code;
 
 
 const char *STACK_CONSTRUCT     = "CONSTRUCTOR";
